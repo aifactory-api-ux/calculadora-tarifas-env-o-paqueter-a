@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shipping"
+version = "0.1.0"
+description = "Cálculo de tarifas de envío de paquetería (peso volumétrico, peso facturable y tarifa por zona)."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: shipping
+Version: 0.1.0
+Summary: Cálculo de tarifas de envío de paquetería (peso volumétrico, peso facturable y tarifa por zona).
+Requires-Python: >=3.10
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"

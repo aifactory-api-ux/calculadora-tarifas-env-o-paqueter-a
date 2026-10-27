@@ -1,0 +1,7 @@
+# Servicio único del proyecto: la librería no expone servidor, así que el
+# contenedor ejecuta la suite de pruebas y termina con su código de salida.
+services:
+  shipping-tests:
+    build: .
+    command: ["pytest", "-q"]
+    restart: "no"

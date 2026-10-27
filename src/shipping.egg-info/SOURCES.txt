@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/shipping.py
+src/shipping.egg-info/PKG-INFO
+src/shipping.egg-info/SOURCES.txt
+src/shipping.egg-info/dependency_links.txt
+src/shipping.egg-info/requires.txt
+src/shipping.egg-info/top_level.txt
+tests/test_container.py
+tests/test_readme.py
+tests/test_shipping.py

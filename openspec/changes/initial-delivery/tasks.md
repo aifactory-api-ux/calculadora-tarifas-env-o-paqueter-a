@@ -1,0 +1,49 @@
+# Tasks
+
+Todos los grupos los ejecuta el agente **Developer** (único rol del equipo: no hay QA ni DevSec). El Developer escribe y ejecuta las pruebas de cada grupo; no se aplaza ninguna prueba ni documentación a un grupo final.
+
+## 1. Project scaffolding and packaging
+
+- [x] 1.1 Create `pyproject.toml` with the project metadata (name `shipping`, version `0.1.0`, `requires-python >=3.10`), the setuptools build backend, `[tool.setuptools] package-dir = {"" = "src"}`, `[tool.pytest.ini_options] with `testpaths = ["tests"]` and `pythonpath = ["src"]`, and the `dev` extra with `pytest`; verify the package installs (`pip install -e .`) and `python -c "import shipping; print(shipping.__all__)"` prints the three public names (if the environment has no network, verify with `python -m pytest` relying on `pythonpath = ["src"]`).
+- [x] 1.2 Create `src/shipping.py` with the module docstring, `__all__ = ["volumetric_weight", "billable_weight", "shipping_cost"]` and the three public signatures `volumetric_weight(length_cm, width_cm, height_cm)`, `billable_weight(actual_kg, length_cm, width_cm, height_cm)` and `shipping_cost(actual_kg, length_cm, width_cm, height_cm, zone, express=False)`; the comportamiento se implementa completo (sin cuerpos stub) y el módulo importa limpio con `python -c "import shipping"`.
+- [x] 1.3 Create `tests/test_shipping.py` with the public API surface test (the three names in `__all__` and the parameter names and order of each public function); verify `pytest tests/test_shipping.py` passes.
+
+## 2. Input validation contract
+
+- [x] 2.1 Implement in `src/shipping.py` the private helpers `_to_decimal(value, name)` (rejects `bool` and `float` with `TypeError`, converts `int`/`Decimal` to `Decimal`) and `_require_positive(value, name)` (raises `ValueError` when the value is not greater than 0); verify `python -c "from shipping import shipping; ..."` shows `TypeError` for `True`/`2.0` and `ValueError` for `0`/`-1`.
+- [x] 2.2 Wire the validation into the three public functions before any computation (numeric arguments through `_require_positive`, `zone` accepted only when it is exactly `"A"`, `"B"` or `"C"` otherwise `ValueError`, `express` accepted only when it is a `bool` otherwise `TypeError`); the calculation bodies were already complete in the scaffolding (task 1.2), so no stub remains: verify that `shipping_cost(2, 30, 20, 10, "B")` no longer raises a validation error and that invalid inputs are rejected before any computation.
+- [x] 2.3 Add the validation tests to `tests/test_shipping.py` (float and bool weights and dimensions → `TypeError`; zero and negative weights and dimensions → `ValueError`; zones `"a"`, `"D"` and `None` → `ValueError`; `express=1` and `express="true"` → `TypeError`; valid zone/express combinations pass validation); verify `pytest tests/test_shipping.py` passes.
+
+## 3. Volumetric weight
+
+- [x] 3.1 Implement `volumetric_weight` in `src/shipping.py` as `length * width * height / 5000` in exact decimal arithmetic with a single `quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)`; verify `python -c "from shipping import volumetric_weight; assert volumetric_weight(30, 20, 10) == Decimal('1.20')"` exits 0.
+- [x] 3.2 Add the volumetric weight tests to `tests/test_shipping.py` (30x20x10 → `Decimal("1.20")`, `Decimal` dimensions → `Decimal("1.20")`, 25x201x1 → `Decimal("1.01")`, 40x30x30 → `Decimal("7.20")`, result is a `Decimal` and not a `float`); verify `pytest tests/test_shipping.py` passes.
+
+## 4. Billable weight
+
+- [x] 4.1 Implement `billable_weight` in `src/shipping.py` as the greatest of the real weight and `volumetric_weight(...)`, rounded up to the next multiple of 0.5 kg (`(value / Decimal("0.5")).to_integral_value(rounding=ROUND_CEILING) * Decimal("0.5")`), raising `ValueError` when the rounded result exceeds 30 kg; verify 2.0 → `Decimal("2.00")`, 2.01 → `Decimal("2.50")` and that 30.5 kg raises `ValueError`.
+- [x] 4.2 Add the billable weight tests to `tests/test_shipping.py` (the greater of real and volumetric weight, 2.0 → `Decimal("2.00")`, 2.01 → `Decimal("2.50")`, volumetric 7.2 → `Decimal("7.50")`, exactly 30 kg accepted → `Decimal("30.00")`, 30.5 kg → `ValueError`, volumetric 200 kg → `ValueError`); verify `pytest tests/test_shipping.py` passes.
+
+## 5. Zone tariffs and express
+
+- [x] 5.1 Add the private `_ZONE_RATES` table to `src/shipping.py` (`"A"` → base 5.00 / 1.20 per kg, `"B"` → 7.50 / 1.80, `"C"` → 12.00 / 2.50, all as `Decimal`) and implement `shipping_cost` as `base + rate * billable_weight(...)`, multiplied by `Decimal("1.5")` when `express` is `True`, with a single final `quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)`; verify `python -c` checks for `Decimal("11.10")`, `Decimal("16.65")` and `Decimal("14.00")` all exit 0.
+- [x] 5.2 Add the tariff tests to `tests/test_shipping.py` (zone A → `Decimal("7.40")`, zone B → `Decimal("11.10")`, zone C → `Decimal("17.00")`, billable-weight-driven → `Decimal("14.00")`, express → `Decimal("16.65")`, express omitted → `Decimal("11.10")`, 2.5 kg zone C express → `Decimal("27.38")`, result is a `Decimal`); verify `pytest tests/test_shipping.py` passes.
+
+## 6. Brief README
+
+- [x] 6.1 Write `README.md` (in Spanish) with the purpose of the library, the installation, the three public functions with their signatures, the zone tariff table, the express multiplier of 1.5, the rounding rules (2 decimals with `ROUND_HALF_UP` and the ceiling to 0.5 kg), the validation contract (`int`/`Decimal` accepted, `float`/`bool` → `TypeError`, values ≤ 0 → `ValueError`, `zone` ∈ {`"A"`, `"B"`, `"C"}`, `express` must be `bool`) and the three usage examples (11.10, 16.65, 14.00); verify the file exists and each of those elements appears in it.
+- [x] 6.2 Create `tests/test_readme.py` asserting that the README mentions `volumetric_weight`, `billable_weight`, `shipping_cost`, the three zones, the express factor 1.5 and the amounts 11.10, 16.65 and 14.00; verify `pytest tests/test_readme.py` passes.
+
+## 7. Containerization and final verification
+
+- [x] 7.1 Create the root `Dockerfile` (`FROM python:3.12-slim`, `WORKDIR /app`, copy `pyproject.toml` and `src/`, `pip install --no-cache-dir .` plus `pytest`, copy `tests/`, `CMD ["pytest", "-q"]`); verify the image builds with `docker build -t shipping-tests .`.
+- [x] 7.2 Create the root `docker-compose.yml` with a single service (`shipping-tests`) that builds from the root `Dockerfile` (`build: .`), runs `pytest -q`, does not restart and exposes no ports; verify `docker compose config` lists the service with the expected command.
+- [x] 7.3 Create `tests/test_container.py` asserting that `Dockerfile` and `docker-compose.yml` exist at the repository root, that the compose service builds from the root `Dockerfile` and that its command runs pytest over `tests/`; verify `pytest tests/test_container.py` passes.
+- [x] 7.4 Run `docker compose up --build` from the repository root and verify it exits with code 0 and the pytest summary reports no failed tests (final integration check of the delivery).
+
+> Nota de verificación: el entorno de desarrollo no dispone de daemon de Docker, así que la construcción de la imagen y `docker compose up --build` se ejecutan donde exista runtime de contenedores. En este entorno se valida el `docker-compose.yml` con `docker-compose config` (servicio `shipping-tests`, contexto de construcción en la raíz, `command: pytest -q`, `restart: "no"`, sin puertos ni dependencias externas), se comprueba que `pip install .` genera la distribución con el módulo `shipping`, y se reproduce el layout de la imagen (`pyproject.toml`, `src/`, `tests/`, `README.md`, `Dockerfile` y `docker-compose.yml` en la raíz de trabajo) ejecutando la suite completa: 119 pruebas superadas y código de salida 0.
+
+## Workflow follow-up
+
+- Archive the change once every group above is complete and `docker compose up --build` has exited 0.
+- Verify the archived result (the delta specs are copied into `openspec/specs/`).
